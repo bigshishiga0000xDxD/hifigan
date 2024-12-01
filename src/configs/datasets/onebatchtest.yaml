@@ -1,0 +1,8 @@
+train:
+  _target_: src.datasets.BaseDataset
+  part: "train"
+  limit: ${dataloader.batch_size}
+val:
+  _target_: src.datasets.BaseDataset
+  part: "train"
+  limit: ${dataloader.batch_size}
