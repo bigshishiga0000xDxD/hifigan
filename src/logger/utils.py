@@ -3,6 +3,7 @@ import io
 import matplotlib.pyplot as plt
 import PIL
 from torchvision.transforms import ToTensor
+from torch.profiler import profile
 
 plt.switch_backend("agg")  # fix RuntimeError: main thread is not in main loop
 
@@ -64,3 +65,6 @@ def plot_spectrogram(spectrogram, name=None):
     plt.close()
 
     return image
+
+def trace_handler(prof: profile):
+    prof.export_chrome_trace(f"logs/trace_{prof.step_num}.json")

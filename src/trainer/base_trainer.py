@@ -9,6 +9,7 @@ from src.datasets.data_utils import inf_loop
 from src.metrics.tracker import MetricTracker
 from src.utils.io_utils import ROOT_PATH
 from src.transforms.spectrogram import MelSpectrogramConfig
+from src.logger.utils import trace_handler
 
 
 class BaseTrainer:
@@ -209,52 +210,70 @@ class BaseTrainer:
         self.train_metrics.reset()
         self.writer.set_step((epoch - 1) * self.epoch_len)
         self.writer.add_scalar("epoch", epoch)
-        for batch_idx, batch in enumerate(
-            tqdm(self.train_dataloader, desc="train", total=self.epoch_len)
-        ):
-            try:
-                batch = self.process_batch(
-                    batch,
-                    metrics=self.train_metrics,
-                )
-            except torch.cuda.OutOfMemoryError as e:
-                if self.skip_oom:
-                    self.logger.warning("OOM on batch. Skipping batch.")
-                    torch.cuda.empty_cache()  # free some memory
-                    continue
-                else:
-                    raise e
-
-            self.train_metrics.update(
-                "generator_grad_norm",
-                self._get_grad_norm(self.model.generator)
-            )
-            self.train_metrics.update(
-                "discriminator_grad_norm",
-                self._get_grad_norm(self.model.discriminators)
-            )
-
-            # log current results
-            if batch_idx % self.log_step == 0:
-                self.writer.set_step((epoch - 1) * self.epoch_len + batch_idx)
-                self.logger.debug(
-                    "Train Epoch: {} {} Loss: {:.6f}".format(
-                        epoch, self._progress(batch_idx), batch["discriminator_loss"].item()
+        
+        with torch.profiler.profile(
+            activities=[
+                torch.profiler.ProfilerActivity.CPU,
+                torch.profiler.ProfilerActivity.CUDA
+            ],
+            schedule=torch.profiler.schedule(
+                skip_first=15,
+                wait=0,
+                warmup=0,
+                active=15,
+            ),
+            record_shapes=True,
+            profile_memory=True,
+            with_stack=True,
+            on_trace_ready=trace_handler
+        ) as prof:
+            for batch_idx, batch in enumerate(
+                tqdm(self.train_dataloader, desc="train", total=self.epoch_len)
+            ):
+                try:
+                    batch = self.process_batch(
+                        batch,
+                        metrics=self.train_metrics,
                     )
+                    prof.step()
+                except torch.cuda.OutOfMemoryError as e:
+                    if self.skip_oom:
+                        self.logger.warning("OOM on batch. Skipping batch.")
+                        torch.cuda.empty_cache()  # free some memory
+                        continue
+                    else:
+                        raise e
+
+                self.train_metrics.update(
+                    "generator_grad_norm",
+                    self._get_grad_norm(self.model.generator)
                 )
-                if self.lr_scheduler is not None:
-                    lr = self.lr_scheduler.get_last_lr()[0]
-                else:
-                    lr = self.config.optimizer.lr
-                self.writer.add_scalar("learning rate", lr)
-                self._log_scalars(self.train_metrics)
-                self._log_batch(batch_idx, batch)
-                # we don't want to reset train metrics at the start of every epoch
-                # because we are interested in recent train metrics
-                last_train_metrics = self.train_metrics.result()
-                self.train_metrics.reset()
-            if batch_idx + 1 >= self.epoch_len:
-                break
+                self.train_metrics.update(
+                    "discriminator_grad_norm",
+                    self._get_grad_norm(self.model.discriminators)
+                )
+
+                # log current results
+                if batch_idx % self.log_step == 0:
+                    self.writer.set_step((epoch - 1) * self.epoch_len + batch_idx)
+                    self.logger.debug(
+                        "Train Epoch: {} {} Loss: {:.6f}".format(
+                            epoch, self._progress(batch_idx), batch["discriminator_loss"].item()
+                        )
+                    )
+                    if self.lr_scheduler is not None:
+                        lr = self.lr_scheduler.get_last_lr()[0]
+                    else:
+                        lr = self.config.optimizer.lr
+                    self.writer.add_scalar("learning rate", lr)
+                    self._log_scalars(self.train_metrics)
+                    self._log_batch(batch_idx, batch)
+                    # we don't want to reset train metrics at the start of every epoch
+                    # because we are interested in recent train metrics
+                    last_train_metrics = self.train_metrics.result()
+                    self.train_metrics.reset()
+                if batch_idx + 1 >= self.epoch_len:
+                    break
 
         logs = last_train_metrics
 
