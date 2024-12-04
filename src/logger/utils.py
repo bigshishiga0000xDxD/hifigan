@@ -41,6 +41,7 @@ def plot_images(imgs, config):
 
     return image
 
+
 def plot_spectrogram(spectrogram, name=None):
     """
     Plot spectrogram

@@ -1,7 +1,7 @@
 from itertools import repeat
 
-from torch import nn
 from hydra.utils import instantiate
+from torch import nn
 
 from src.datasets.collate import collate_fn
 from src.utils.init_utils import set_worker_seed

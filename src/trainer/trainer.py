@@ -1,9 +1,9 @@
 import torch
 
+from src.logger.utils import plot_spectrogram
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
 from src.transforms import MelSpectrogram
-from src.logger.utils import plot_spectrogram
 
 
 class Trainer(BaseTrainer):
@@ -42,7 +42,9 @@ class Trainer(BaseTrainer):
         batch.update(self.model.generate(**batch))
 
         self.transform = MelSpectrogram().to(self.device)
-        inv_spec = self.transform(wav=batch["output"].detach(), wav_length=batch['output_length'])
+        inv_spec = self.transform(
+            wav=batch["output"].detach(), wav_length=batch["output_length"]
+        )
         batch["output_spec"] = inv_spec["spec"]
         batch["output_spec_length"] = inv_spec["spec_length"]
 
@@ -54,7 +56,7 @@ class Trainer(BaseTrainer):
             batch["generator_loss"].backward()
             self._clip_grad_norm()
             self.optimizer["generator"].step()
-        
+
         # Discriminator update
         batch["output"] = batch["output"].detach()
         batch.update(self.model.discriminate(**batch))
@@ -65,7 +67,7 @@ class Trainer(BaseTrainer):
             batch["discriminator_loss"].backward()
             self._clip_grad_norm()
             self.optimizer["discriminator"].step()
-        
+
         if self.is_train:
             self._update_lr()
 
@@ -93,8 +95,10 @@ class Trainer(BaseTrainer):
         self._log_audio("input_wav", batch["wav"], batch["wav_length"])
         self._log_audio("output_wav", batch["output"], batch["output_length"])
         self._log_spectrogram("input_spectrogram", batch["spec"], batch["spec_length"])
-        self._log_spectrogram("output_spectrogram", batch["output_spec"], batch["output_spec_length"])
-        
+        self._log_spectrogram(
+            "output_spectrogram", batch["output_spec"], batch["output_spec_length"]
+        )
+
         # logging scheme might be different for different partitions
         if mode == "train":  # the method is called only every self.log_step steps
             # Log Stuff
@@ -102,11 +106,11 @@ class Trainer(BaseTrainer):
         else:
             # Log Stuff
             pass
-    
+
     def _log_spectrogram(self, name, spec, spec_length):
-        spectrogram_for_plot = spec[0, :, :spec_length[0]].detach().cpu()
+        spectrogram_for_plot = spec[0, :, : spec_length[0]].detach().cpu()
         image = plot_spectrogram(spectrogram_for_plot)
         self.writer.add_image(name, image)
-    
+
     def _log_audio(self, name, audio, length):
-        self.writer.add_audio(name, audio[0, :length[0]], sample_rate=self.sample_rate)
+        self.writer.add_audio(name, audio[0, : length[0]], sample_rate=self.sample_rate)

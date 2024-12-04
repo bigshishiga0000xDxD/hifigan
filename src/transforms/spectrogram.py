@@ -1,12 +1,10 @@
 from dataclasses import dataclass
 
+import librosa
 import torch
+import torchaudio
 from torch import nn
 from torch.nn.utils.rnn import pad_sequence
-
-import torchaudio
-
-import librosa
 
 
 @dataclass
@@ -37,7 +35,7 @@ class MelSpectrogram(nn.Module):
             n_fft=config.n_fft,
             f_min=config.f_min,
             f_max=config.f_max,
-            n_mels=config.n_mels
+            n_mels=config.n_mels,
         )
 
         # The is no way to set power in constructor in 0.5.0 version.
@@ -50,12 +48,14 @@ class MelSpectrogram(nn.Module):
             n_fft=config.n_fft,
             n_mels=config.n_mels,
             fmin=config.f_min,
-            fmax=config.f_max
+            fmax=config.f_max,
         ).T
         self.mel_spectrogram.mel_scale.fb.copy_(torch.tensor(mel_basis))
 
     @torch.no_grad()
-    def forward(self, wav: torch.Tensor, wav_length: torch.Tensor, **batch) -> torch.Tensor:
+    def forward(
+        self, wav: torch.Tensor, wav_length: torch.Tensor, **batch
+    ) -> torch.Tensor:
         if len(wav.shape) == 1:
             wav = wav.unsqueeze(0)
         # assuming B x T now
@@ -65,9 +65,7 @@ class MelSpectrogram(nn.Module):
         for sample, length in zip(wav, wav_length):
             sample = sample[:length]
 
-            mel = self.mel_spectrogram(sample) \
-                .clamp_(min=1e-5) \
-                .log_()
+            mel = self.mel_spectrogram(sample).clamp_(min=1e-5).log_()
             specs.append(mel)
 
         mel = pad_sequence(
@@ -76,10 +74,11 @@ class MelSpectrogram(nn.Module):
                 spec.transpose(0, -1)
                 for spec in specs
             ],
-            batch_first=True, padding_value=self.config.pad_value
+            batch_first=True,
+            padding_value=self.config.pad_value,
         ).transpose(1, -1)
 
         return {
-            'spec': mel[..., :-1],
-            'spec_length': wav_length // self.config.hop_length
+            "spec": mel[..., :-1],
+            "spec_length": wav_length // self.config.hop_length,
         }

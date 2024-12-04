@@ -21,9 +21,13 @@ def collate_fn(dataset_items: list[dict]):
         [item["wav"] for item in dataset_items], batch_first=True, padding_value=0
     )
 
-    result_batch.update(default_collate([
-        {key: value for key, value in item.items() if key != "wav"}
-        for item in dataset_items
-    ]))
+    result_batch.update(
+        default_collate(
+            [
+                {key: value for key, value in item.items() if key != "wav"}
+                for item in dataset_items
+            ]
+        )
+    )
 
     return result_batch

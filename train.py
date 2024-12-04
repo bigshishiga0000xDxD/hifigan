@@ -35,7 +35,9 @@ def main(config):
 
     # setup data_loader instances
     # batch_transforms should be put on device
-    dataloaders, batch_transforms, spectrogram_transform = get_dataloaders(config, device)
+    dataloaders, batch_transforms, spectrogram_transform = get_dataloaders(
+        config, device
+    )
 
     # build model architecture, then print to console
     model = instantiate(config.model).to(device)
@@ -43,14 +45,15 @@ def main(config):
 
     # get function handles of loss and metrics
     loss_function = {
-        k: v.to(device)
-        for k, v in instantiate(config.loss_function).items()
+        k: v.to(device) for k, v in instantiate(config.loss_function).items()
     }
     metrics = instantiate(config.metrics)
 
     # build optimizer, learning rate scheduler
     optimizer_G = instantiate(config.optimizer, params=model.generator.parameters())
-    optimizer_D = instantiate(config.optimizer, params=model.discriminators.parameters())
+    optimizer_D = instantiate(
+        config.optimizer, params=model.discriminators.parameters()
+    )
     optimizer = {"generator": optimizer_G, "discriminator": optimizer_D}
 
     # dummy_variable = torch.nn.Parameter(torch.zeros(1))

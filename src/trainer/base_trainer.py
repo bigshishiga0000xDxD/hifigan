@@ -7,8 +7,8 @@ from tqdm.auto import tqdm
 
 from src.datasets.data_utils import inf_loop
 from src.metrics.tracker import MetricTracker
-from src.utils.io_utils import ROOT_PATH
 from src.transforms.spectrogram import MelSpectrogramConfig
+from src.utils.io_utils import ROOT_PATH
 
 
 class BaseTrainer:
@@ -226,12 +226,11 @@ class BaseTrainer:
                     raise e
 
             self.train_metrics.update(
-                "generator_grad_norm",
-                self._get_grad_norm(self.model.generator)
+                "generator_grad_norm", self._get_grad_norm(self.model.generator)
             )
             self.train_metrics.update(
                 "discriminator_grad_norm",
-                self._get_grad_norm(self.model.discriminators)
+                self._get_grad_norm(self.model.discriminators),
             )
 
             # log current results
@@ -239,7 +238,9 @@ class BaseTrainer:
                 self.writer.set_step((epoch - 1) * self.epoch_len + batch_idx)
                 self.logger.debug(
                     "Train Epoch: {} {} Loss: {:.6f}".format(
-                        epoch, self._progress(batch_idx), batch["discriminator_loss"].item()
+                        epoch,
+                        self._progress(batch_idx),
+                        batch["discriminator_loss"].item(),
                     )
                 )
                 if self.lr_scheduler is not None:
@@ -483,10 +484,7 @@ class BaseTrainer:
             "arch": arch,
             "epoch": epoch,
             "state_dict": self.model.state_dict(),
-            "optimizer": {
-                k: v.state_dict()
-                for k, v in self.optimizer.items()
-            },
+            "optimizer": {k: v.state_dict() for k, v in self.optimizer.items()},
             "monitor_best": self.mnt_best,
             "config": self.config,
         }
@@ -585,4 +583,4 @@ class BaseTrainer:
         for k in self.optimizer:
             optimizer = self.optimizer[k]
             for param_group in optimizer.param_groups:
-                param_group['lr'] = lr
+                param_group["lr"] = lr

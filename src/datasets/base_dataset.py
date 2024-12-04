@@ -91,7 +91,7 @@ class BaseDataset(Dataset):
         assert wav.shape[0] == 1
 
         wav = wav.squeeze(0)
-        wav = wav[:-(len(wav) % config.hop_length)]
+        wav = wav[: -(len(wav) % config.hop_length)]
 
         return wav.squeeze(0)
 
