@@ -23,6 +23,7 @@ class Inferencer(BaseTrainer):
         save_path,
         metrics=None,
         batch_transforms=None,
+        spectorgram_transform=None,
         skip_model_load=False,
     ):
         """
@@ -42,6 +43,8 @@ class Inferencer(BaseTrainer):
             batch_transforms (dict[nn.Module] | None): transforms that
                 should be applied on the whole batch. Depend on the
                 tensor name.
+            spectorgram_transform (nn.Module | None): spectrogram getter
+                function.
             skip_model_load (bool): if False, require the user to set
                 pre-trained checkpoint path. Set this argument to True if
                 the model desirable weights are defined outside of the
@@ -58,12 +61,12 @@ class Inferencer(BaseTrainer):
 
         self.model = model
         self.batch_transforms = batch_transforms
+        self.spectrogram_transform = spectorgram_transform
 
         # define dataloaders
         self.evaluation_dataloaders = {k: v for k, v in dataloaders.items()}
 
         # path definition
-
         self.save_path = save_path
 
         # define metrics

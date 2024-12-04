@@ -2,6 +2,9 @@ from torch import nn
 
 
 class BaseModel(nn.Module):
+    generator: nn.Module
+    discriminators: nn.ModuleList
+
     def __str__(self):
         """
         Model prints with the number of parameters.

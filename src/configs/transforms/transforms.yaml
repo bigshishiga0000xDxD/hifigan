@@ -1,4 +1,5 @@
 defaults:
   - batch_transforms: transforms
   - instance_transforms: transforms
+  - spectrogram: spectrogram
   - _self_

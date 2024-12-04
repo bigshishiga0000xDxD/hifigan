@@ -35,20 +35,27 @@ def main(config):
 
     # setup data_loader instances
     # batch_transforms should be put on device
-    dataloaders, batch_transforms = get_dataloaders(config, device)
+    dataloaders, batch_transforms, spectrogram_transform = get_dataloaders(config, device)
 
     # build model architecture, then print to console
     model = instantiate(config.model).to(device)
     logger.info(model)
 
     # get function handles of loss and metrics
-    loss_function = instantiate(config.loss_function).to(device)
+    loss_function = {
+        k: v.to(device)
+        for k, v in instantiate(config.loss_function).items()
+    }
     metrics = instantiate(config.metrics)
 
     # build optimizer, learning rate scheduler
-    trainable_params = filter(lambda p: p.requires_grad, model.parameters())
-    optimizer = instantiate(config.optimizer, params=trainable_params)
-    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer)
+    optimizer_G = instantiate(config.optimizer, params=model.generator.parameters())
+    optimizer_D = instantiate(config.optimizer, params=model.discriminators.parameters())
+    optimizer = {"generator": optimizer_G, "discriminator": optimizer_D}
+
+    # dummy_variable = torch.nn.Parameter(torch.zeros(1))
+    dummy_optimizer = instantiate(config.optimizer, params=[torch.empty(1)])
+    lr_scheduler = instantiate(config.lr_scheduler, optimizer=dummy_optimizer)
 
     # epoch_len = number of iterations for iteration-based training
     # epoch_len = None or len(dataloader) for epoch-based training
@@ -67,6 +74,7 @@ def main(config):
         logger=logger,
         writer=writer,
         batch_transforms=batch_transforms,
+        spectrogram_transform=spectrogram_transform,
         skip_oom=config.trainer.get("skip_oom", True),
     )
 

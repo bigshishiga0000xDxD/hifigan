@@ -1,4 +1,6 @@
 import torch
+from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import default_collate
 
 
 def collate_fn(dataset_items: list[dict]):
@@ -15,5 +17,13 @@ def collate_fn(dataset_items: list[dict]):
     """
 
     result_batch = {}
+    result_batch["wav"] = pad_sequence(
+        [item["wav"] for item in dataset_items], batch_first=True, padding_value=0
+    )
+
+    result_batch.update(default_collate([
+        {key: value for key, value in item.items() if key != "wav"}
+        for item in dataset_items
+    ]))
 
     return result_batch

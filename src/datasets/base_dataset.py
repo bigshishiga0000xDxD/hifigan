@@ -3,9 +3,13 @@ import random
 from typing import List
 
 import torch
+import torchaudio
 from torch.utils.data import Dataset
 
+from src.transforms.spectrogram import MelSpectrogramConfig
+
 logger = logging.getLogger(__name__)
+config = MelSpectrogramConfig()
 
 
 class BaseDataset(Dataset):
@@ -56,12 +60,12 @@ class BaseDataset(Dataset):
                 (a single dataset element).
         """
         data_dict = self._index[ind]
-        data_path = data_dict["path"]
-        data_object = self.load_object(data_path)
-        data_label = data_dict["label"]
+        data_dict["wav"] = self.load_object(data_dict["wav_path"])
+        data_dict["wav_length"] = data_dict["wav"].shape[0]
 
-        instance_data = {"data_object": data_object, "labels": data_label}
-        instance_data = self.preprocess_data(instance_data)
+        instance_data = self.preprocess_data(data_dict)
+
+        assert isinstance(instance_data["wav"], torch.Tensor)
 
         return instance_data
 
@@ -71,7 +75,7 @@ class BaseDataset(Dataset):
         """
         return len(self._index)
 
-    def load_object(self, path):
+    def load_object(self, path: str):
         """
         Load object from disk.
 
@@ -80,8 +84,16 @@ class BaseDataset(Dataset):
         Returns:
             data_object (Tensor):
         """
-        data_object = torch.load(path)
-        return data_object
+        assert path.endswith(".wav")
+
+        wav, sr = torchaudio.load(path)
+        assert sr == 22050
+        assert wav.shape[0] == 1
+
+        wav = wav.squeeze(0)
+        wav = wav[:-(len(wav) % config.hop_length)]
+
+        return wav.squeeze(0)
 
     def preprocess_data(self, instance_data):
         """
@@ -138,14 +150,7 @@ class BaseDataset(Dataset):
                 the dataset. The dict has required metadata information,
                 such as label and object path.
         """
-        for entry in index:
-            assert "path" in entry, (
-                "Each dataset item should include field 'path'" " - path to audio file."
-            )
-            assert "label" in entry, (
-                "Each dataset item should include field 'label'"
-                " - object ground-truth label."
-            )
+        pass
 
     @staticmethod
     def _sort_index(index):

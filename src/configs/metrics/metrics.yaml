@@ -1,3 +1,9 @@
-device: "auto"
 train: [] # metrics that are calculated during training
-inference: [] # metrics that are calculated during inference (eval)
+inference: # metrics that are calculated during inference (eval)
+  - _target_: src.metrics.PESQMetric
+    metric:
+      _target_: torchmetrics.audio.pesq.PerceptualEvaluationSpeechQuality
+      fs: 8000
+      mode: "nb"
+    name: "pesq"
+    device: ${trainer.device}

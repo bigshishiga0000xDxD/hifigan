@@ -3,9 +3,7 @@ train:
   root: "data"
   part: "train"
   train_split: 0.9
-  limit: ${dataloader.batch_size}
 val:
   _target_: src.datasets.LJSpeechDataset
   root: "data"
-  part: "train"
-  limit: ${dataloader.batch_size}
+  part: "val"

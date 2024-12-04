@@ -8,6 +8,7 @@ from tqdm.auto import tqdm
 from src.datasets.data_utils import inf_loop
 from src.metrics.tracker import MetricTracker
 from src.utils.io_utils import ROOT_PATH
+from src.transforms.spectrogram import MelSpectrogramConfig
 
 
 class BaseTrainer:
@@ -30,6 +31,7 @@ class BaseTrainer:
         epoch_len=None,
         skip_oom=True,
         batch_transforms=None,
+        spectrogram_transform=None,
     ):
         """
         Args:
@@ -54,7 +56,10 @@ class BaseTrainer:
             batch_transforms (dict[Callable] | None): transforms that
                 should be applied on the whole batch. Depend on the
                 tensor name.
+            spectorgram_transform (Callable | None): spectorgram getter
+                function.
         """
+        self.sample_rate = MelSpectrogramConfig().sr
         self.is_train = True
 
         self.config = config
@@ -71,6 +76,7 @@ class BaseTrainer:
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.batch_transforms = batch_transforms
+        self.spectrogram_transform = spectrogram_transform
 
         # define dataloaders
         self.train_dataloader = dataloaders["train"]
@@ -119,7 +125,8 @@ class BaseTrainer:
         self.metrics = metrics
         self.train_metrics = MetricTracker(
             *self.config.writer.loss_names,
-            "grad_norm",
+            "generator_grad_norm",
+            "discriminator_grad_norm",
             *[m.name for m in self.metrics["train"]],
             writer=self.writer,
         )
@@ -218,20 +225,27 @@ class BaseTrainer:
                 else:
                     raise e
 
-            self.train_metrics.update("grad_norm", self._get_grad_norm())
+            self.train_metrics.update(
+                "generator_grad_norm",
+                self._get_grad_norm(self.model.generator)
+            )
+            self.train_metrics.update(
+                "discriminator_grad_norm",
+                self._get_grad_norm(self.model.discriminators)
+            )
 
             # log current results
             if batch_idx % self.log_step == 0:
                 self.writer.set_step((epoch - 1) * self.epoch_len + batch_idx)
                 self.logger.debug(
                     "Train Epoch: {} {} Loss: {:.6f}".format(
-                        epoch, self._progress(batch_idx), batch["loss"].item()
+                        epoch, self._progress(batch_idx), batch["discriminator_loss"].item()
                     )
                 )
                 if self.lr_scheduler is not None:
                     lr = self.lr_scheduler.get_last_lr()[0]
                 else:
-                    lr = self.optimizer.param_groups[0]["lr"]
+                    lr = self.config.optimizer.lr
                 self.writer.add_scalar("learning rate", lr)
                 self._log_scalars(self.train_metrics)
                 self._log_batch(batch_idx, batch)
@@ -386,7 +400,7 @@ class BaseTrainer:
             )
 
     @torch.no_grad()
-    def _get_grad_norm(self, norm_type=2):
+    def _get_grad_norm(self, model: torch.nn.Module, norm_type=2):
         """
         Calculates the gradient norm for logging.
 
@@ -395,7 +409,7 @@ class BaseTrainer:
         Returns:
             total_norm (float): the calculated norm.
         """
-        parameters = self.model.parameters()
+        parameters = model.parameters()
         if isinstance(parameters, torch.Tensor):
             parameters = [parameters]
         parameters = [p for p in parameters if p.grad is not None]
@@ -469,7 +483,10 @@ class BaseTrainer:
             "arch": arch,
             "epoch": epoch,
             "state_dict": self.model.state_dict(),
-            "optimizer": self.optimizer.state_dict(),
+            "optimizer": {
+                k: v.state_dict()
+                for k, v in self.optimizer.items()
+            },
             "monitor_best": self.mnt_best,
             "config": self.config,
         }
@@ -525,7 +542,8 @@ class BaseTrainer:
                 "are not resumed."
             )
         else:
-            self.optimizer.load_state_dict(checkpoint["optimizer"])
+            for k in self.optimizer:
+                self.optimizer[k].load_state_dict(checkpoint["optimizer"][k])
             if self.lr_scheduler is not None:
                 self.lr_scheduler.load_state_dict(checkpoint["lr_scheduler"])
 
@@ -555,3 +573,16 @@ class BaseTrainer:
             self.model.load_state_dict(checkpoint["state_dict"])
         else:
             self.model.load_state_dict(checkpoint)
+
+    def _update_lr(self):
+        if self.lr_scheduler is None:
+            return
+        assert isinstance(self.optimizer, dict)
+
+        self.lr_scheduler.step()
+        lr = self.lr_scheduler.get_last_lr()[0]
+
+        for k in self.optimizer:
+            optimizer = self.optimizer[k]
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = lr

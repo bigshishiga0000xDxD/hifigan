@@ -1,5 +1,6 @@
 from itertools import repeat
 
+from torch import nn
 from hydra.utils import instantiate
 
 from src.datasets.collate import collate_fn
@@ -36,11 +37,14 @@ def move_batch_transforms_to_device(batch_transforms, device):
             tensor name.
         device (str): device to use for batch transforms.
     """
-    for transform_type in batch_transforms.keys():
-        transforms = batch_transforms.get(transform_type)
-        if transforms is not None:
-            for transform_name in transforms.keys():
-                transforms[transform_name] = transforms[transform_name].to(device)
+    if isinstance(batch_transforms, nn.Module):
+        batch_transforms = batch_transforms.to(device)
+    else:
+        for transform_type in batch_transforms.keys():
+            transforms = batch_transforms.get(transform_type)
+            if transforms is not None:
+                for transform_name in transforms.keys():
+                    transforms[transform_name] = transforms[transform_name].to(device)
 
 
 def get_dataloaders(config, device):
@@ -60,7 +64,9 @@ def get_dataloaders(config, device):
     """
     # transforms or augmentations init
     batch_transforms = instantiate(config.transforms.batch_transforms)
+    spectorgram_transform = instantiate(config.transforms.spectrogram)
     move_batch_transforms_to_device(batch_transforms, device)
+    move_batch_transforms_to_device(spectorgram_transform, device)
 
     # dataset partitions init
     datasets = instantiate(config.datasets)  # instance transforms are defined inside
@@ -85,4 +91,4 @@ def get_dataloaders(config, device):
         )
         dataloaders[dataset_partition] = partition_dataloader
 
-    return dataloaders, batch_transforms
+    return dataloaders, batch_transforms, spectorgram_transform
