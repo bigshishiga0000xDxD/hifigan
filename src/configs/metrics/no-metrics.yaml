@@ -1,0 +1,2 @@
+train: [] # metrics that are calculated during training
+inference: [] # metrics that are calculated during inference (eval)

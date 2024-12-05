@@ -43,7 +43,7 @@ class Trainer(BaseTrainer):
 
         self.transform = MelSpectrogram().to(self.device)
         inv_spec = self.transform(
-            wav=batch["output"].detach(), wav_length=batch["output_length"]
+            wav=batch["output"], wav_length=batch["output_length"]
         )
         batch["output_spec"] = inv_spec["spec"]
         batch["output_spec_length"] = inv_spec["spec_length"]

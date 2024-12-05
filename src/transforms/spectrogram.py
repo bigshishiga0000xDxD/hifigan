@@ -52,7 +52,6 @@ class MelSpectrogram(nn.Module):
         ).T
         self.mel_spectrogram.mel_scale.fb.copy_(torch.tensor(mel_basis))
 
-    @torch.no_grad()
     def forward(
         self, wav: torch.Tensor, wav_length: torch.Tensor, **batch
     ) -> torch.Tensor:
