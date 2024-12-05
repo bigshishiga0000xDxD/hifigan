@@ -8,6 +8,6 @@ loss_names:
   - "discriminator_loss"
   - "g_adv_loss"
   - "g_mel_loss"
-  - "d_adv_loss"
+  - "g_fm_loss"
 log_checkpoints: False # set to True if you want to log save_dir with checkpoints to W&B
 id_length: 8 # length of the run_id
