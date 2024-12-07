@@ -2,7 +2,7 @@ train:
   _target_: src.datasets.LJSpeechDataset
   root: "data"
   part: "train"
-  train_split: 0.9
+  train_split: 0.95
 val:
   _target_: src.datasets.LJSpeechDataset
   root: "data"

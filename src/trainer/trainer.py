@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 
 from src.logger.utils import plot_spectrogram
@@ -53,7 +55,7 @@ class Trainer(BaseTrainer):
 
         if self.is_train:
             self.optimizer["generator"].zero_grad()
-            batch["generator_loss"].backward()
+            self._backward(batch["generator_loss"])
             self._clip_grad_norm()
             self.optimizer["generator"].step()
 
@@ -64,7 +66,7 @@ class Trainer(BaseTrainer):
 
         if self.is_train:
             self.optimizer["discriminator"].zero_grad()
-            batch["discriminator_loss"].backward()
+            self._backward(batch["discriminator_loss"])
             self._clip_grad_norm()
             self.optimizer["discriminator"].step()
 
@@ -76,7 +78,12 @@ class Trainer(BaseTrainer):
             metrics.update(loss_name, batch[loss_name].item())
 
         for met in metric_funcs:
-            metrics.update(met.name, met(**batch))
+            value = met(**batch)
+            if self.accelerator is not None:
+                value_tensor = torch.tensor([value], device=self.accelerator.device)
+                gathered_value = self.accelerator.gather(value_tensor)
+                value = torch.mean(gathered_value).item()
+            metrics.update(met.name, value)
         return batch
 
     def _log_batch(self, batch_idx, batch, mode="train"):
@@ -98,6 +105,7 @@ class Trainer(BaseTrainer):
         self._log_spectrogram(
             "output_spectrogram", batch["output_spec"], batch["output_spec_length"]
         )
+        self._log_confidences(batch["real_scores"], batch["fake_scores"])
 
         # logging scheme might be different for different partitions
         if mode == "train":  # the method is called only every self.log_step steps
@@ -114,3 +122,20 @@ class Trainer(BaseTrainer):
 
     def _log_audio(self, name, audio, length):
         self.writer.add_audio(name, audio[0, : length[0]], sample_rate=self.sample_rate)
+
+    def _log_confidences(
+        self, real_scores: list[torch.Tensor], fake_scores: list[torch.Tensor], bins=10
+    ):
+        def convert(x: list[torch.Tensor]):
+            return np.stack([y.detach().cpu().numpy() for y in x], axis=0)
+
+        real_scores = convert(real_scores)
+        fake_scores = convert(fake_scores)
+
+        fig, axes = plt.subplots(4, 2, figsize=(16, 8))
+        for i, ax in enumerate(axes.flatten()):
+            ax.hist(real_scores[i], bins=bins, label="real")
+            ax.hist(fake_scores[i], bins=bins, label="fake")
+            ax.legend()
+        self.writer.add_figure("confidences", fig)
+        plt.close(fig)

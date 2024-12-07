@@ -8,10 +8,12 @@ defaults:
   - _self_
 optimizer:
   _target_: torch.optim.AdamW
-  lr: 2e-4
+  lr: 4e-4
   betas: [0.8, 0.99]
   weight_decay: 0.01
-lr_scheduler: null
+lr_scheduler:
+  _target_: torch.optim.lr_scheduler.ExponentialLR
+  gamma: 0.99999
 loss_function:
   generator:
     _target_: src.loss.GeneratorLoss
@@ -19,9 +21,9 @@ loss_function:
     _target_: src.loss.DiscriminatorLoss
 trainer:
   log_step: 50
-  n_epochs: 100
+  n_epochs: 200
   epoch_len: null
-  device_tensors: ["wav"] # which tensors should be on device (ex. GPU)
+  device_tensors: ["wav", "wav_length"] # which tensors should be on device (ex. GPU)
   resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
   device: auto # device name or "auto"
   override: False # if True, will override the previous run with the same name
@@ -30,3 +32,4 @@ trainer:
   early_stop: ${trainer.n_epochs} # epochs for early stopping
   save_dir: "saved"
   seed: 1
+  ddp: false

@@ -220,6 +220,14 @@ class WandBWriter:
             step=self.step,
         )
 
+    def add_figure(self, plot_name, figure, interactive=False):
+        import wandb
+
+        if not interactive:
+            figure = wandb.Image(figure)
+
+        self.wandb.log({self._object_name(plot_name): figure}, step=self.step)
+
     def add_images(self, image_names, images):
         raise NotImplementedError()
 

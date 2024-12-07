@@ -1,13 +1,15 @@
+import os
 import warnings
 
 import hydra
 import torch
+from accelerate import Accelerator
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
 from src.datasets.data_utils import get_dataloaders
 from src.trainer import Trainer
-from src.utils.init_utils import set_random_seed, setup_saving_and_logging
+from src.utils.init_utils import DummyLogger, set_random_seed, setup_saving_and_logging
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -24,14 +26,25 @@ def main(config):
     """
     set_random_seed(config.trainer.seed)
 
-    project_config = OmegaConf.to_container(config)
-    logger = setup_saving_and_logging(config)
-    writer = instantiate(config.writer, logger, project_config)
-
-    if config.trainer.device == "auto":
+    accelerator = None
+    if config.trainer.ddp:
+        accelerator = Accelerator()
+        rank = os.environ.get("LOCAL_RANK")
+        device = f"cuda:{rank}"
+        config.trainer.device = device
+    elif config.trainer.device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
     else:
         device = config.trainer.device
+
+    # log only in main process
+    if accelerator is None or rank == "0":
+        project_config = OmegaConf.to_container(config)
+        logger = setup_saving_and_logging(config)
+        writer = instantiate(config.writer, logger, project_config)
+    else:
+        logger = DummyLogger()
+        writer = DummyLogger()
 
     # setup data_loader instances
     # batch_transforms should be put on device
@@ -79,6 +92,7 @@ def main(config):
         batch_transforms=batch_transforms,
         spectrogram_transform=spectrogram_transform,
         skip_oom=config.trainer.get("skip_oom", True),
+        accelerator=accelerator,
     )
 
     trainer.train()

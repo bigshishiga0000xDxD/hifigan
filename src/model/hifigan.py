@@ -1,3 +1,5 @@
+import copy
+
 import torch
 from torch import nn
 from torch.nn.utils.parametrizations import spectral_norm, weight_norm
@@ -320,3 +322,18 @@ class HiFiGAN(BaseModel):
             "real_activations": real_activations,
             "fake_activations": fake_activations,
         }
+
+    def _copy(self):
+        # copy up to module level for ddp
+        model = copy.deepcopy(self)
+
+        model.generator = self.generator
+        model.discriminators = nn.ModuleList([d for d in self.discriminators])
+
+        assert model is not self
+        assert model.discriminators is not self.discriminators
+        assert model.generator is self.generator
+        for d1, d2 in zip(model.discriminators, self.discriminators):
+            assert d1 is d2
+
+        return model

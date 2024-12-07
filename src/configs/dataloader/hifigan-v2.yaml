@@ -1,4 +1,18 @@
-_target_: torch.utils.data.DataLoader
-batch_size: 5
-num_workers: 1
-pin_memory: True
+train:
+  _target_: torch.utils.data.DataLoader
+  batch_size: 32
+  num_workers: 4
+  pin_memory: True
+  collate_fn:
+    _target_: src.datasets.collate.get_collate_fn
+    unpad: true
+    max_length: 35840 # must be divisible by hop_length
+
+inference:
+  _target_: torch.utils.data.DataLoader
+  batch_size: 4
+  num_workers: 1
+  pin_memory: True
+  collate_fn:
+    _target_: src.datasets.collate.get_collate_fn
+    unpad: false
