@@ -41,7 +41,7 @@ accelerate launch train.py
 You can also download pretrained model with
 
 ```bash
-gdown --fuzzy
+gdown --fuzzy "https://drive.google.com/file/d/1iYcckQwjIOjdgVbGN3UDRv4mg8DHeFtE/view?usp=sharing"
 ```
 
 To run inference, use the following command.
@@ -50,7 +50,7 @@ To run inference, use the following command.
 python synthesize.py inferencer.from_pretrained="<PATH_TO_CHECKPOINT>.pth" inferencer.save_path="<SAVE_NAME>" datasets.val.root="<PATH_TO_DATASET>"
 ```
 
-The dataset should contain either a transcriptions folder or a wavs folder, with `.txt` or `.wav` files, respectively. When given `transcriptions` the model will run full TTS pipeline with pretrained FastSpeech2 acoustic model. When given `wavs` the model will extract spectrograms from audio files and pass them to the vocoder model. After that, output files will be stored in `data/saved/<SAVE_NAME>/val` directory.
+The dataset should contain a `transcriptions` folder with `.txt` files. After that, output files will be stored in `data/saved/<SAVE_NAME>/val` directory.
 
 You can also pass the text you want to synthesize using the following command.
 
