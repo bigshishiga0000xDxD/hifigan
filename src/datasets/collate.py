@@ -17,9 +17,11 @@ def collate_fn(dataset_items: list[dict], unpad: bool, max_length: int | None):
     """
 
     result_batch = {}
-    result_batch["wav"] = pad_sequence(
-        [item["wav"] for item in dataset_items], batch_first=True, padding_value=0
-    )
+
+    if "wav" in dataset_items[0]:
+        result_batch["wav"] = pad_sequence(
+            [item["wav"] for item in dataset_items], batch_first=True, padding_value=0
+        )
 
     result_batch.update(
         default_collate(

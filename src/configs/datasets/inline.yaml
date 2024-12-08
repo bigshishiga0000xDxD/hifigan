@@ -1,0 +1,3 @@
+val:
+  _target_: src.datasets.InlineDataset
+  transcription: null

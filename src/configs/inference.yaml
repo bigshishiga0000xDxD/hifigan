@@ -1,12 +1,12 @@
 defaults:
-  - model: baseline
-  - metrics: metrics
-  - datasets: onebatchtest
-  - dataloader: onebatchtest
-  - transforms: transforms
+  - model: hifigan-v2
+  - metrics: no-metrics
+  - datasets: custom
+  - dataloader: inference
+  - transforms: transforms-acoustic
   - _self_
 inferencer:
-  device_tensors: [] # which tensors should be on device (ex. GPU)
+  device_tensors: ["wav", "wav_length"] # which tensors should be on device (ex. GPU)
   device: auto # device name or "auto"
   save_path: null # any name here, can be a dataset name
   seed: 1

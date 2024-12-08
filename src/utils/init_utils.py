@@ -171,3 +171,11 @@ class DummyLogger:
             pass
 
         return func
+
+
+class DummyPartialState:
+    is_main_process = True
+
+    @staticmethod
+    def on_main_process(func):
+        return func

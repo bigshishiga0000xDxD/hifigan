@@ -14,7 +14,7 @@ from src.utils.init_utils import DummyLogger, set_random_seed, setup_saving_and_
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-@hydra.main(version_base=None, config_path="src/configs", config_name="baseline")
+@hydra.main(config_path="src/configs", config_name="baseline")
 def main(config):
     """
     Main script for training. Instantiates the model, optimizer, scheduler,

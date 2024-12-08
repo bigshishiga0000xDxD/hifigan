@@ -60,12 +60,13 @@ class BaseDataset(Dataset):
                 (a single dataset element).
         """
         data_dict = self._index[ind]
-        data_dict["wav"] = self.load_object(data_dict["wav_path"])
-        data_dict["wav_length"] = data_dict["wav"].shape[0]
+        if "wav_path" in data_dict:
+            data_dict["wav"] = self.load_object(data_dict["wav_path"])
+            data_dict["wav_length"] = data_dict["wav"].shape[0]
+        if "txt_path" in data_dict:
+            data_dict["normalized_transcript"] = self.load_object(data_dict["txt_path"])
 
         instance_data = self.preprocess_data(data_dict)
-
-        assert isinstance(instance_data["wav"], torch.Tensor)
 
         return instance_data
 
@@ -84,16 +85,22 @@ class BaseDataset(Dataset):
         Returns:
             data_object (Tensor):
         """
-        assert path.endswith(".wav")
+        if path.endswith(".txt"):
+            with open(path, "r") as f:
+                return f.read()
+        else:
+            target_sr = 22050
+            wav, sr = torchaudio.load(path)
 
-        wav, sr = torchaudio.load(path)
-        assert sr == 22050
-        assert wav.shape[0] == 1
+            if sr != target_sr:
+                wav = torchaudio.functional.resample(wav, sr, target_sr)
 
-        wav = wav.squeeze(0)
-        wav = wav[: -(len(wav) % config.hop_length)]
+            wav = torch.mean(wav, dim=0, keepdim=True)  # stereo to mono
 
-        return wav.squeeze(0)
+            wav = wav.squeeze(0)
+            wav = wav[: -(len(wav) % config.hop_length)]
+
+            return wav
 
     def preprocess_data(self, instance_data):
         """

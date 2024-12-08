@@ -12,7 +12,7 @@ from src.utils.io_utils import ROOT_PATH
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-@hydra.main(version_base=None, config_path="src/configs", config_name="inference")
+@hydra.main(config_path="src/configs", config_name="inference")
 def main(config):
     """
     Main script for inference. Instantiates the model, metrics, and
@@ -43,8 +43,11 @@ def main(config):
     metrics = instantiate(config.metrics)
 
     # save_path for model predictions
-    save_path = ROOT_PATH / "data" / "saved" / config.inferencer.save_path
-    save_path.mkdir(exist_ok=True, parents=True)
+    if config.inferencer.save_path is not None:
+        save_path = ROOT_PATH / "data" / "saved" / config.inferencer.save_path
+        save_path.mkdir(exist_ok=True, parents=True)
+    else:
+        save_path = None
 
     inferencer = Inferencer(
         model=model,

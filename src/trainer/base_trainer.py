@@ -10,11 +10,15 @@ from tqdm.auto import tqdm
 from src.datasets.data_utils import inf_loop
 from src.metrics.tracker import MetricTracker
 from src.transforms.spectrogram import MelSpectrogramConfig
+from src.utils.init_utils import DummyPartialState
 from src.utils.io_utils import ROOT_PATH
 
-kwargs = InitProcessGroupKwargs(...).to_kwargs()
-kwargs["backend"] = "nccl"
-distr_state = PartialState(**kwargs)
+try:
+    kwargs = InitProcessGroupKwargs(...).to_kwargs()
+    kwargs["backend"] = "nccl"
+    distr_state = PartialState(**kwargs)
+except ValueError:
+    distr_state = DummyPartialState()
 
 
 class BaseTrainer:
@@ -428,7 +432,8 @@ class BaseTrainer:
                 the dataloader with some of the tensors on the device.
         """
         for tensor_for_device in self.cfg_trainer.device_tensors:
-            batch[tensor_for_device] = batch[tensor_for_device].to(self.device)
+            if tensor_for_device in batch:
+                batch[tensor_for_device] = batch[tensor_for_device].to(self.device)
         return batch
 
     def transform_batch(self, batch):

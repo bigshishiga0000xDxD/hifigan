@@ -1,9 +1,9 @@
 train:
   _target_: src.datasets.LJSpeechDataset
-  root: "data"
+  root: "/data/vk/stud_lab_vk_07/hifigan/data"
   part: "train"
   train_split: 0.95
 val:
   _target_: src.datasets.LJSpeechDataset
-  root: "data"
+  root: "/data/vk/stud_lab_vk_07/hifigan/data"
   part: "val"

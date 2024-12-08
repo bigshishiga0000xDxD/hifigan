@@ -1,0 +1,2 @@
+_target_: src.model.FastSpeech2Model
+device: ${inferencer.device}

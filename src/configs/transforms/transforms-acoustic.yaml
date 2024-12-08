@@ -1,0 +1,5 @@
+defaults:
+  - batch_transforms: transforms
+  - instance_transforms: transforms
+  - spectrogram: acoustic-model
+  - _self_

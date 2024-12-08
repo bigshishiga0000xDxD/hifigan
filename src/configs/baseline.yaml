@@ -8,12 +8,12 @@ defaults:
   - _self_
 optimizer:
   _target_: torch.optim.AdamW
-  lr: 4e-4
+  lr: 1e-4
   betas: [0.8, 0.99]
   weight_decay: 0.01
 lr_scheduler:
-  _target_: torch.optim.lr_scheduler.ExponentialLR
-  gamma: 0.99999
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  T_max: 20000
 loss_function:
   generator:
     _target_: src.loss.GeneratorLoss
@@ -22,7 +22,7 @@ loss_function:
 trainer:
   log_step: 50
   n_epochs: 200
-  epoch_len: null
+  epoch_len: 2000
   device_tensors: ["wav", "wav_length"] # which tensors should be on device (ex. GPU)
   resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
   device: auto # device name or "auto"

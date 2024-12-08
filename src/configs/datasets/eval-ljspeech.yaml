@@ -1,0 +1,4 @@
+val:
+  _target_: src.datasets.LJSpeechDataset
+  root: "data"
+  part: "val"

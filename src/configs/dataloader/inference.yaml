@@ -1,0 +1,17 @@
+train:
+  _target_: torch.utils.data.DataLoader
+  batch_size: 1
+  num_workers: 4
+  pin_memory: True
+  collate_fn:
+    _target_: src.datasets.collate.get_collate_fn
+    unpad: false
+
+inference:
+  _target_: torch.utils.data.DataLoader
+  batch_size: 1
+  num_workers: 4
+  pin_memory: True
+  collate_fn:
+    _target_: src.datasets.collate.get_collate_fn
+    unpad: false
